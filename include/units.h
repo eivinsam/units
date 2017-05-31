@@ -210,3 +210,12 @@ namespace units
 #undef TEMPLATE_QA_QB
 #undef QA
 #undef QB
+
+namespace uv
+{
+	template <class T>
+	struct is_scalar;
+
+	template <class T, units::Unit U>
+	struct is_scalar<units::quantity<T, U>> : public std::true_type { };
+}
