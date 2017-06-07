@@ -44,7 +44,7 @@ namespace units
 		case Unit::Speed: return out << "m/s";
 		case Unit::Density: return out << "kg/m^3";
 		case Unit::Frequency: return out << "Hz";
-		default: 
+		default:
 			return out << "{invalid unit}";
 		}
 	}
@@ -54,6 +54,7 @@ namespace units
 
 	template <Unit A, Unit B>
 	constexpr equal_test<A, B> require_equal = {};
+
 
 	constexpr inline Unit operator*(Unit a, Unit b)
 	{
@@ -88,7 +89,7 @@ namespace units
 		{
 		case Unit::Time: return Unit::Frequency;
 		case Unit::Frequency: return Unit::Time;
-		default: 
+		default:
 			return Unit::Invalid;
 		}
 
@@ -101,10 +102,23 @@ namespace units
 		case co(Unit::Volume, Unit::Distance): return Unit::Area;
 		case co(Unit::Area, Unit::Distance): return Unit::Distance;
 		case co(Unit::Mass, Unit::Volume): return Unit::Density;
-		default: 
+		default:
 			return Unit::Invalid;
 		}
 	}
+
+	template <Unit U>
+	struct Unity { static_assert(U != Unit::Invalid, "Invalid unit"); };
+
+	static constexpr Unity<Unit::Distance> meter;
+	static constexpr Unity<Unit::Time> second;
+	static constexpr Unity<Unit::Mass> kilogram;
+	static constexpr Unity<Unit::Frequency> hertz;
+
+	template <Unit UA, Unit UB>
+	inline constexpr Unity<UA * UB> operator*(Unity<UA>, Unity<UB>) { return {}; }
+	template <Unit UA, Unit UB>
+	inline constexpr Unity<UA / UB> operator/(Unity<UA>, Unity<UB>) { return {}; }
 
 	template <typename T, Unit U>
 	class quantity
@@ -179,16 +193,14 @@ namespace units
 	template <class V> using Density      = quantity<V, Unit::Density>;
 	template <class V> using Frequency    = quantity<V, Unit::Frequency>;
 
-	namespace unit
-	{
-		template <class V> constexpr auto     distance(V value) { return     Distance<V>{ value }; }
-		template <class V> constexpr auto         time(V value) { return         Time<V>{ value }; }
-		template <class V> constexpr auto         mass(V value) { return         Mass<V>{ value }; }
-		template <class V> constexpr auto         area(V value) { return         Area<V>{ value }; }
-		template <class V> constexpr auto       volume(V value) { return       Volume<V>{ value }; }
-		template <class V> constexpr auto        speed(V value) { return        Speed<V>{ value }; }
-		template <class V> constexpr auto      density(V value) { return      Density<V>{ value }; }
-	}
+	template <class T, Unit U, class = details::if_arithmetic_t<T>>
+	inline constexpr auto operator*(T value, Unity<U>) { return details::maker<U>::make(value); }
+	template <class T, Unit U, class = details::if_arithmetic_t<T>>
+	inline constexpr auto operator/(T value, Unity<U>) { return details::maker<Unit::None / U>::make(value); }
+	template <class A, Unit UA, Unit UB>
+	inline constexpr auto operator*(quantity<A, UA> a, Unity<UB>) { return details::maker<UA * UB>::make(a.value); }
+	template <class A, Unit UA, Unit UB>
+	inline constexpr auto operator/(quantity<A, UA> a, Unity<UB>) { return details::maker<UA / UB>::make(a.value); }
 
 	TEMPLATE_A_QB constexpr auto operator*(A a, QB b) { return details::maker<UB>::make(a * b.value); }
 	TEMPLATE_A_QB constexpr auto operator*(QB b, A a) { return details::maker<UB>::make(b.value * a); }
@@ -197,21 +209,17 @@ namespace units
 
 	namespace float_literals
 	{
-		inline constexpr auto operator"" _m    (long double v) { return unit::distance(static_cast<float>(v)); }
-		inline constexpr auto operator"" _m2   (long double v) { return unit::area(static_cast<float>(v)); }
-		inline constexpr auto operator"" _m3   (long double v) { return unit::volume(static_cast<float>(v)); }
-		inline constexpr auto operator"" _kg   (long double v) { return unit::mass(static_cast<float>(v)); }
-		inline constexpr auto operator"" _s    (long double v) { return unit::time(static_cast<float>(v)); }
-		inline constexpr auto operator"" _mps  (long double v) { return unit::speed(static_cast<float>(v)); }
-		inline constexpr auto operator"" _kgpm3(long double v) { return unit::density(static_cast<float>(v)); }
+		inline constexpr auto operator"" _m    (long double v) { return static_cast<float>(v)*meter; }
+		inline constexpr auto operator"" _m2   (long double v) { return static_cast<float>(v)*meter*meter; }
+		inline constexpr auto operator"" _m3   (long double v) { return static_cast<float>(v)*meter*meter*meter; }
+		inline constexpr auto operator"" _kg   (long double v) { return static_cast<float>(v)*kilogram; }
+		inline constexpr auto operator"" _s    (long double v) { return static_cast<float>(v)*second; }
+		inline constexpr auto operator"" _mps  (long double v) { return static_cast<float>(v)*meter/second; }
+		inline constexpr auto operator"" _kgpm3(long double v) { return static_cast<float>(v)*kilogram/(meter*meter*meter); }
 
-		inline constexpr auto operator"" _mm  (long double v) { return unit::distance(static_cast<float>(v / 1000)); }
-		inline constexpr auto operator"" _g   (long double v) { return unit::mass(static_cast<float>(v / 1000)); }
-		inline constexpr auto operator"" _kgpl(long double v) { return unit::density(static_cast<float>(v * 1000)); }
-
-		static constexpr auto meter  = 1.0_m;
-		static constexpr auto second = 1.0_s;
-		static constexpr auto gram   = 0.001_kg;
+		inline constexpr auto operator"" _mm  (long double v) { return static_cast<float>(v / 1000)*meter; }
+		inline constexpr auto operator"" _g   (long double v) { return static_cast<float>(v / 1000)*kilogram; }
+		inline constexpr auto operator"" _kgpl(long double v) { return static_cast<float>(v * 1000)*kilogram/(meter*meter*meter); }
 
 		static constexpr float micro = 1e-6f;
 		static constexpr float milli = 1e-3f;
@@ -232,6 +240,9 @@ namespace uv
 {
 	template <class T>
 	struct is_scalar;
+
+	template <units::Unit U>
+	struct is_scalar<units::Unity<U>> : public std::true_type { };
 
 	template <class T, units::Unit U>
 	struct is_scalar<units::quantity<T, U>> : public std::true_type { };
