@@ -173,6 +173,11 @@ namespace units
 	template <class A, class UA, int... BN>
 	inline constexpr auto operator/(QA a, Unit<BN...>) { return details::maker<decltype(UA{} / Unit<BN...>{})> ::make(a.value); }
 
+	TEMPLATE_A_QB constexpr auto operator+(A a, QB b) { static_assert(details::always_false_v<A>, "Addition requires equal units"); }
+	TEMPLATE_A_QB constexpr auto operator+(QB b, A a) { static_assert(details::always_false_v<A>, "Addition requires equal units"); }
+	TEMPLATE_A_QB constexpr auto operator-(A a, QB b) { static_assert(details::always_false_v<A>, "Substraction requires equal units"); }
+	TEMPLATE_A_QB constexpr auto operator-(QB b, A a) { static_assert(details::always_false_v<A>, "Substraction requires equal units"); }
+
 	TEMPLATE_A_QB constexpr auto operator*(A a, QB b) { return details::maker<UB>::make(a * b.value); }
 	TEMPLATE_A_QB constexpr auto operator*(QB b, A a) { return details::maker<UB>::make(b.value * a); }
 	TEMPLATE_A_QB constexpr auto operator/(A a, QB b) { return details::maker<decltype(Ratio{} / UB{})> ::make(a / b.value); }
