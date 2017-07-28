@@ -27,6 +27,9 @@ namespace units
 		inline constexpr bool all(bool first, Rest... rest) { return first && all(rest...); }
 	}
 
+	struct Zero { };
+	static constexpr Zero zero;
+
 	template <int m, int kg, int s, int A, int K, int mol, int cd>
 	struct Unit { };
 
@@ -103,8 +106,9 @@ namespace units
 		T value;
 
 		Quantity() { }
+		constexpr Quantity(Zero) : value(0) { }
 
-		template <class S, class = details::if_arithmetic_t<S>>
+		template <class S>
 		explicit constexpr Quantity(S value) : value(T(value)) { }
 
 		      T& operator*()       { return value; }
@@ -184,6 +188,8 @@ namespace units
 	TEMPLATE_A_QB constexpr auto operator/(QB b, A a) { return details::maker<UB>::make(b.value / a); }
 
 	template <class A, class UA> constexpr auto sqrt(QA a) { return details::maker<decltype(sqrt(UA{}))>::make(std::sqrt(a.value)); }
+
+	template <class A, class UA> constexpr bool isfinite(QA a) { return std::isfinite(a.value); }
 
 	namespace float_literals
 	{
