@@ -235,11 +235,11 @@ namespace units
 
 		template <class S, class G> constexpr auto operator+(Quantity<S, Unit<G, N...>> b) const
 		{
-			constexpr size_t cq = std::gcd(unit.frac.q, b.unit.frac.q);
-			constexpr size_t pa =   unit.frac.p*(b.unit.frac.q/cq);
-			constexpr size_t pb = b.unit.frac.p*(  unit.frac.q/cq);
-			constexpr size_t P = std::gcd(pa, pb);
-			constexpr size_t Q = unit.frac.q*(b.unit.frac.q/cq);
+			static constexpr size_t cq = std::gcd(unit.frac.q, b.unit.frac.q);
+			static constexpr size_t pa =   unit.frac.p*(b.unit.frac.q/cq);
+			static constexpr size_t pb = b.unit.frac.p*(  unit.frac.q/cq);
+			static constexpr size_t P = std::gcd(pa, pb);
+			static constexpr size_t Q = unit.frac.q*(b.unit.frac.q/cq);
 
 			return details::maker<Unit<Frac<P, Q>, N...>>::make((pa/P)*value + (pb/P)*b.value);
 		}
